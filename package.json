@@ -1,21 +1,3 @@
-{
-  "name": "fireboard-marketplace",
-  "version": "1.0.0",
-  "description": "Firebase-native marketplace app with real-time, chat, and push notifications",
-  "type": "module",
-  "scripts": {
-    "dev": "firebase emulators:start",
-    "deploy": "firebase deploy",
-    "serve": "npx http-server public -p 8080",
-    "test": "jest",
-    "lint": "eslint .",
-    "format": "prettier --write ."
-  },
-  "dependencies": {
-    "firebase": "^10.7.1"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.23.7",
     "@babel/preset-env": "^7.23.7",
     "babel-jest": "^29.7.0",
     "eslint": "^8.56.0",

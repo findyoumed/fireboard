@@ -4,6 +4,8 @@ import {
   doc,
   addDoc,
   getDoc,
+  getDocs,
+  updateDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -26,7 +28,7 @@ export function subscribeToPosts(callback) {
     orderBy('createdAt', 'desc'),
     limit(50)
   );
-  
+
   return onSnapshot(q, (snapshot) => {
     snapshot.docChanges().forEach((change) => {
       const data = { id: change.doc.id, ...change.doc.data() };
@@ -39,7 +41,7 @@ export function subscribeToPosts(callback) {
 export async function getPost(postId) {
   const docRef = doc(db, 'posts', postId);
   const docSnap = await getDoc(docRef);
-  
+
   if (docSnap.exists()) {
     return { id: docSnap.id, ...docSnap.data() };
   }
@@ -49,9 +51,9 @@ export async function getPost(postId) {
 // Create new post
 export async function createPost(postData, imageFiles) {
   if (!currentUser) throw new Error('Not authenticated');
-  
+
   const imageUrls = [];
-  
+
   // Upload images
   for (const file of imageFiles) {
     const storageRef = ref(storage, `posts/${Date.now()}_${file.name}`);
@@ -59,10 +61,10 @@ export async function createPost(postData, imageFiles) {
     const url = await getDownloadURL(storageRef);
     imageUrls.push(url);
   }
-  
+
   // Extract keywords from title
   const keywords = extractKeywords(postData.title);
-  
+
   const post = {
     title: postData.title,
     content: postData.content,
@@ -79,7 +81,7 @@ export async function createPost(postData, imageFiles) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   };
-  
+
   const docRef = await addDoc(collection(db, 'posts'), post);
   return docRef.id;
 }
@@ -87,7 +89,7 @@ export async function createPost(postData, imageFiles) {
 // Update post
 export async function updatePost(postId, updates) {
   if (!currentUser) throw new Error('Not authenticated');
-  
+
   const docRef = doc(db, 'posts', postId);
   await updateDoc(docRef, {
     ...updates,
@@ -98,7 +100,7 @@ export async function updatePost(postId, updates) {
 // Delete post
 export async function deletePost(postId) {
   if (!currentUser) throw new Error('Not authenticated');
-  
+
   const docRef = doc(db, 'posts', postId);
   await deleteDoc(docRef);
 }
@@ -109,7 +111,7 @@ export function searchPosts(keyword, callback) {
     collection(db, 'posts'),
     where('keywords', 'array-contains', keyword.toLowerCase())
   );
-  
+
   return onSnapshot(q, (snapshot) => {
     const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(posts);
@@ -126,7 +128,7 @@ function extractKeywords(text) {
 }
 
 // Format price
-export function formatPrice(price){
+export function formatPrice(price) {
   return new Intl.NumberFormat('ko-KR').format(price) + '원';
 }
 
@@ -136,7 +138,7 @@ export function formatDate(timestamp) {
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   const now = new Date();
   const diff = now - date;
-  
+
   // Less than 1 minute
   if (diff < 60000) return '방금 전';
   // Less than 1 hour
@@ -145,6 +147,47 @@ export function formatDate(timestamp) {
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}시간 전`;
   // Less than 7 days
   if (diff < 604800000) return `${Math.floor(diff / 86400000)}일 전`;
-  
+
   return date.toLocaleDateString('ko-KR');
+}
+
+// --- Comment System ---
+
+// Get comments for a post
+export async function getComments(postId) {
+  const q = query(
+    collection(db, 'posts', postId, 'comments'),
+    orderBy('createdAt', 'asc')
+  );
+
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+// Add a comment
+export async function addComment(postId, content) {
+  if (!currentUser) throw new Error('Not authenticated');
+
+  const comment = {
+    content,
+    author: {
+      uid: currentUser.uid,
+      name: currentUser.displayName || currentUser.email,
+      photoURL: currentUser.photoURL || ''
+    },
+    createdAt: serverTimestamp()
+  };
+
+  const docRef = await addDoc(collection(db, 'posts', postId, 'comments'), comment);
+  return { id: docRef.id, ...comment };
+}
+
+// Delete a comment
+export async function deleteComment(postId, commentId) {
+  if (!currentUser) throw new Error('Not authenticated');
+
+  // Note: In a real app, you should verify ownership on server side (Security Rules)
+  // Here we just delete it from client side
+  const docRef = doc(db, 'posts', postId, 'comments', commentId);
+  await deleteDoc(docRef);
 }

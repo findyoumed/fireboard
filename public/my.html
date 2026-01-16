@@ -31,22 +31,26 @@
         <h2 class="page-title">내 정보</h2>
 
         <div class="card" style="max-width:500px; margin:0 auto;">
-            <div style="text-align:center; margin-bottom:20px;">
-                <img id="profile-img" src="https://via.placeholder.com/100" alt="Profile"
-                    style="width:100px; height:100px; border-radius:50%; object-fit:cover;">
-            </div>
-
-            <div style="margin-bottom:15px;">
-                <label style="font-weight:bold; display:block; margin-bottom:5px;">이메일</label>
-                <div id="profile-email" style="padding:10px; background:#f5f5f5; border-radius:4px;"></div>
+            <div style="text-align:center; margin-bottom:30px;">
+                <div
+                    style="width:100px; height:100px; margin:0 auto; background:#f0f0f0; border-radius:50%; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                    <img id="profile-img"
+                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E"
+                        alt="Profile" style="width:100%; height:100%; object-fit:cover;">
+                </div>
             </div>
 
             <div style="margin-bottom:20px;">
-                <label style="font-weight:bold; display:block; margin-bottom:5px;">이름</label>
-                <div id="profile-name" style="padding:10px; background:#f5f5f5; border-radius:4px;"></div>
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">이메일</label>
+                <input type="text" id="profile-email" class="input" readonly style="background:#f9fafb; color:#555;">
             </div>
 
-            <button id="page-logout-btn" class="btn btn-gray" style="width:100%;">로그아웃</button>
+            <div style="margin-bottom:30px;">
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">이름</label>
+                <input type="text" id="profile-name" class="input" readonly style="background:#f9fafb; color:#555;">
+            </div>
+
+            <button id="page-logout-btn" class="btn btn-gray" style="width:100%; padding:12px;">로그아웃</button>
         </div>
     </div>
 
@@ -62,19 +66,29 @@
 
         // Wait for auth check
         const user = await waitForAuth();
+
         if (!user) {
             alert('로그인이 필요합니다.');
             window.location.href = '/login.html';
         } else {
             // Update profile info
-            document.getElementById('profile-email').textContent = user.email;
-            document.getElementById('profile-name').textContent = user.displayName || '이름 없음';
+            document.getElementById('profile-email').value = user.email;
+            document.getElementById('profile-name').value = user.displayName || '이름 없음';
             if (user.photoURL) {
                 document.getElementById('profile-img').src = user.photoURL;
             }
+
+            // Manually update header state
+            const loginBtn = document.getElementById('login-btn');
+            const logoutBtn = document.getElementById('logout-btn');
+            const userInfo = document.getElementById('user-info');
+
+            if (loginBtn) loginBtn.style.display = 'none';
+            if (logoutBtn) logoutBtn.style.display = 'inline-block';
+            if (userInfo) userInfo.textContent = user.displayName || user.email;
         }
 
-        // Logout handler
+        // Logout handler (Page button)
         document.getElementById('page-logout-btn').addEventListener('click', async () => {
             try {
                 await authLogout();
@@ -85,7 +99,7 @@
             }
         });
 
-        // Header logout handler (if exists)
+        // Logout handler (Header button)
         const headerLogoutBtn = document.getElementById('logout-btn');
         if (headerLogoutBtn) {
             headerLogoutBtn.addEventListener('click', async () => {

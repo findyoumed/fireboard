@@ -23,15 +23,14 @@ fireboard/
 │   ├── write.html          # 글쓰기
 │   ├── login.html          # 로그인
 │   ├── register.html       # 회원가입
+│   ├── my.html             # 내 정보 (프로필)
 │   ├── js/
 │   │   ├── firebase-init.js   # Firebase 초기화
 │   │   ├── config.js          # Firebase Config
-??  ??  ?????? runtime-config.example.js # Runtime Firebase Config (template)
-??  ??  ?????? runtime-config.js  # Runtime Firebase Config (gitignored)
 │   │   ├── auth.js            # 인증 로직
 │   │   └── posts.js           # 게시글 CRUD
 │   └── css/
-│       └── style.css          # next_board 스타일
+│       └── style.css          # 스타일시트
 ├── firestore.rules         # Security Rules
 ├── storage.rules           # Storage Rules
 └── package.json
@@ -49,10 +48,10 @@ fireboard/
 
 ### 2. 설정 파일 업데이트
 
-`public/js/runtime-config.example.js`? ??? `public/js/runtime-config.js`? ??? Firebase ??? ?????:
+`public/js/config.js` 파일에 Firebase 설정을 직접 입력합니다:
 
 ```javascript
-window.__FIREBASE_CONFIG__ = {
+export const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_PROJECT.firebaseapp.com",
   projectId: "YOUR_PROJECT_ID",
@@ -62,17 +61,8 @@ window.__FIREBASE_CONFIG__ = {
   measurementId: "YOUR_MEASUREMENT_ID"
 };
 
-// Optional
-window.__VAPID_KEY__ = "YOUR_VAPID_KEY";
-```javascript
-export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
-};
+// FCM VAPID Key (Optional)
+export const vapidKey = "YOUR_VAPID_KEY";
 ```
 
 ### 3. 로컬 실행
@@ -147,12 +137,10 @@ firebase deploy --only storage:rules
 ## ⚠️ 알려진 제한사항
 
 1. **실시간 업데이트**: 현재는 수동 새로고침 필요
-
    - 이유: 클라이언트 필터링 방식 (인덱스 불필요)
    - 개선: `onSnapshot` 사용 + Firestore 인덱스 생성
 
 2. **검색**: 클라이언트 기반 (포함 검색)
-
    - 개선: Algolia 연동 또는 Full-text search
 
 3. **페이징**: 모든 데이터 로드 후 클라이언트 분할

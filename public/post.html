@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
   <link rel="stylesheet" href="/css/style.css">
   <script src="/js/runtime-config.js"></script>
 </head>
+
 <body>
   <header>
     <div class="wrap hd-inner">
@@ -53,13 +55,13 @@
   <script type="module">
     import { currentUser, db } from '/js/firebase-init.js';
     import { doc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-    import { formatDate } from '/js/posts.js';
+    import { formatDate, getComments, addComment, deleteComment } from '/js/posts.js';
 
     const urlParams = new URLSearchParams(window.location.search);
     const postId = urlParams.get('id');
 
     if (!postId) {
-      alert('\uc798\ubabb\ub41c \uc811\uadfc\uc785\ub2c8\ub2e4.');
+      alert('잘못된 접근입니다.');
       history.back();
     }
 
@@ -69,17 +71,17 @@
         const docSnap = await getDoc(docRef);
 
         if (!docSnap.exists()) {
-          alert('\uac8c\uc2dc\uae00\uc744 \ucc3e\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.');
+          alert('게시글을 찾을 수 없습니다.');
           history.back();
           return;
         }
 
         const post = docSnap.data();
-        const authorName = (post.author && (post.author.name || post.author.email)) || '\uc775\uba85';
+        const authorName = (post.author && (post.author.name || post.author.email)) || '익명';
 
         document.getElementById('post-title').textContent = post.title;
         document.getElementById('post-meta').innerHTML =
-          '\uc791\uc131\uc790 <b>' + escapeHtml(authorName) + '</b> | ' + formatDate(post.createdAt) + ' | \uc870\ud68c -';
+          '작성자 <b>' + escapeHtml(authorName) + '</b> | ' + formatDate(post.createdAt) + ' | 조회 -';
         document.getElementById('post-content').innerHTML = escapeHtml(post.content).replace(/\n/g, '<br>');
 
         if (post.images && post.images.length > 0) {
@@ -92,30 +94,95 @@
 
         if (currentUser && post.author && currentUser.uid === post.author.uid) {
           document.getElementById('action-buttons').innerHTML =
-            '<button class="btn" onclick="location.href=\'/write.html?id=' + postId + '\'">&#xC218;&#xC815;</button>' +
-            '<button class="btn btn-red" id="delete-btn">&#xC0AD;&#xC81C;</button>';
+            '<button class="btn" onclick="location.href=\'/write.html?id=' + postId + '\'">수정</button>' +
+            '<button class="btn btn-red" id="delete-btn">삭제</button>';
 
           document.getElementById('delete-btn').addEventListener('click', async () => {
-            if (!confirm('\uc815\ub9d0 \uc0ad\uc81c\ud558\uc2dc\uaca0\uc2b5\ub2c8\uae4c?')) return;
+            if (!confirm('정말 삭제하시겠습니까?')) return;
 
             try {
               await deleteDoc(docRef);
-              alert('\uc0ad\uc81c\ub418\uc5c8\uc2b5\ub2c8\ub2e4.');
+              alert('삭제되었습니다.');
               history.back();
             } catch (err) {
-              alert('\uc0ad\uc81c \uc2e4\ud328: ' + err.message);
+              alert('삭제 실패: ' + err.message);
             }
           });
         }
 
         document.getElementById('loading').style.display = 'none';
         document.getElementById('post-view').style.display = 'block';
+
+        // Load comments after post is loaded
+        loadComments();
+
       } catch (err) {
         console.error('Post load error:', err);
-        alert('\uac8c\uc2dc\uae00\uc744 \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.');
+        alert('게시글을 불러오지 못했습니다.');
         history.back();
       }
     }
+
+    async function loadComments() {
+      try {
+        const comments = await getComments(postId);
+        const list = document.getElementById('comment-list');
+
+        if (comments.length === 0) {
+          list.innerHTML = '<li style="padding:10px 0; color:#888;">댓글이 없습니다.</li>';
+          return;
+        }
+
+        list.innerHTML = comments.map(c => {
+          const isOwner = currentUser && (currentUser.uid === c.author.uid || (currentUser.email === 'admin' /* simple admin check */));
+          const deleteBtn = isOwner ? `<a href="#" onclick="window.deleteCommentHandler('${c.id}'); return false;" style="color:red; font-size:12px; margin-left:10px;">[삭제]</a>` : '';
+
+          return `
+            <li style="border-bottom:1px solid #eee; padding:10px 0;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span style="font-size:13px;"><b>${escapeHtml(c.author.name)}</b> | ${formatDate(c.createdAt)}</span>
+                <div>${deleteBtn}</div>
+              </div>
+              <div style="white-space:pre-wrap;">${escapeHtml(c.content)}</div>
+            </li>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Failed to load comments:', err);
+      }
+    }
+
+    // Comment form submit
+    document.getElementById('comment-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentUser) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
+
+      const content = document.getElementById('co-content').value.trim();
+      if (!content) return;
+
+      try {
+        await addComment(postId, content);
+        document.getElementById('co-content').value = '';
+        loadComments();
+      } catch (err) {
+        console.error('Failed to add comment:', err);
+        alert('댓글 등록 실패: ' + err.message);
+      }
+    });
+
+    // Global handler for delete comment
+    window.deleteCommentHandler = async (commentId) => {
+      if (!confirm('댓글을 삭제하시겠습니까?')) return;
+      try {
+        await deleteComment(postId, commentId);
+        loadComments();
+      } catch (err) {
+        alert('삭제 실패: ' + err.message);
+      }
+    };
 
     function escapeHtml(text) {
       const div = document.createElement('div');
@@ -126,4 +193,5 @@
     setTimeout(loadPost, 500);
   </script>
 </body>
+
 </html>
