@@ -85,11 +85,14 @@
   </footer>
 
   <script type="module">
-    import { requireAuth } from '/js/auth.js';
+    import { waitForAuth } from '/js/firebase-init.js';
     import { createPost } from '/js/posts.js';
 
-    if (!requireAuth()) {
-      throw new Error('Authentication required');
+    // Wait for auth check
+    const user = await waitForAuth();
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      window.location.href = '/login.html';
     }
 
     const form = document.getElementById('write-form');

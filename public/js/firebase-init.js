@@ -26,17 +26,33 @@ export { messaging };
 export let currentUser = null;
 
 // Auth state listener
+let authInitialized = false;
+let authResolve = null;
+const authPromise = new Promise((resolve) => {
+  authResolve = resolve;
+});
+
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
+  if (!authInitialized) {
+    authInitialized = true;
+    if (authResolve) authResolve(user);
+  }
   updateAuthUI(user);
 });
+
+// Wait for auth to initialize
+export function waitForAuth() {
+  if (authInitialized) return Promise.resolve(currentUser);
+  return authPromise;
+}
 
 // Update UI based on auth state
 function updateAuthUI(user) {
   const loginBtn = document.getElementById('login-btn');
   const logoutBtn = document.getElementById('logout-btn');
   const userInfo = document.getElementById('user-info');
-  
+
   if (user) {
     if (loginBtn) loginBtn.style.display = 'none';
     if (logoutBtn) logoutBtn.style.display = 'inline-block';
@@ -58,7 +74,7 @@ export async function requestNotificationPermission() {
     console.warn('FCM VAPID key missing; skipping token request.');
     return null;
   }
-  
+
   try {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
