@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
+    }
+    
+    // Posts collection
+    match /posts/{postId} {
+      allow read: if true;  // Anyone can read posts
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && isOwner(resource.data.author.uid);
+      
+      // Comments subcollection
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn();
+        allow update, delete: if isSignedIn() && isOwner(resource.data.authorId);
+      }
+    }
+    
+    // Chats collection
+    match /chats/{chatId} {
+      allow read: if isSignedIn() && 
+        request.auth.uid in resource.data.participants;
+      allow create: if isSignedIn();
+      
+      // Messages subcollection
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && 
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        allow create: if isSignedIn();
+      }
+    }
+  }
+}

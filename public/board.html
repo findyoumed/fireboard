@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>&#xAC8C;&#xC2DC;&#xD310; - Fireboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/runtime-config.js"></script>
+</head>
+<body>
+  <header>
+    <div class="wrap hd-inner">
+      <a href="/" class="logo">Fireboard 2026</a>
+      <nav class="gnb">
+        <a href="/board.html?category=notice">&#xACF5;&#xC9C0;&#xC0AC;&#xD56D;</a>
+        <a href="/board.html?category=free">&#xC790;&#xC720;&#xAC8C;&#xC2DC;&#xD310;</a>
+        <a href="/board.html?category=qna">Q&A</a>
+        <a href="/board.html?category=gallery">&#xAC24;&#xB7EC;&#xB9AC;</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="wrap container">
+    <h2 class="page-title" id="board-title">&#xAC8C;&#xC2DC;&#xD310;</h2>
+
+    <form class="sch-wrap" id="search-form">
+      <input type="hidden" id="search-category">
+      <select id="sfl">
+        <option value="title">&#xC81C;&#xBAA9;</option>
+        <option value="content">&#xB0B4;&#xC6A9;</option>
+        <option value="author">&#xAE00;&#xC4F4;&#xC774;</option>
+      </select>
+      <input type="text" id="stx" placeholder="&#xAC80;&#xC0C9;&#xC5B4; &#xC785;&#xB825;">
+      <button class="btn btn-gray" type="submit">&#xAC80;&#xC0C9;</button>
+    </form>
+
+    <table class="tns-tbl" id="board-table">
+      <thead>
+        <tr>
+          <th width="60">&#xBC88;&#xD638;</th>
+          <th>&#xC81C;&#xBAA9;</th>
+          <th width="120">&#xAE00;&#xC4F4;&#xC774;</th>
+          <th width="100">&#xB0A0;&#xC9DC;</th>
+          <th width="60">&#xC870;&#xD68C;</th>
+        </tr>
+      </thead>
+      <tbody id="board-tbody">
+        <tr>
+          <td colspan="5" style="padding:50px 0;">&#xB85C;&#xB529; &#xC911;..</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div id="pagination"></div>
+
+    <div style="margin-top:20px; text-align:right;">
+      <a href="#" class="btn" id="write-btn">&#xAE00;&#xC4F0;&#xAE30;</a>
+    </div>
+  </div>
+
+  <footer>
+    <div class="wrap">
+      <p>&copy; 2026 Fireboard. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { currentUser, db } from '/js/firebase-init.js';
+    import { collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { formatDate } from '/js/posts.js';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const category = urlParams.get('category') || 'free';
+    const pageSize = 20;
+    let currentPage = 1;
+    let allPosts = [];
+    let filteredPosts = [];
+
+    const categoryNames = {
+      notice: '\uacf5\uc9c0\uc0ac\ud56d',
+      free: '\uc790\uc720\uac8c\uc2dc\ud310',
+      qna: 'Q&A',
+      gallery: '\uac24\ub7ec\ub9ac'
+    };
+
+    const boardTitle = document.getElementById('board-title');
+    const searchForm = document.getElementById('search-form');
+    const searchCategory = document.getElementById('search-category');
+    const searchField = document.getElementById('sfl');
+    const searchInput = document.getElementById('stx');
+    const writeBtn = document.getElementById('write-btn');
+
+    function updateTitle() {
+      const label = categoryNames[category] || '\uac8c\uc2dc\ud310';
+      boardTitle.innerHTML = label + ' <span style="font-size:14px; font-weight:normal;">(Total: ' + allPosts.length + ')</span>';
+    }
+
+    function updateWriteLink() {
+      writeBtn.href = '/write.html?category=' + category;
+    }
+
+    function renderPosts() {
+      const startIdx = (currentPage - 1) * pageSize;
+      const endIdx = startIdx + pageSize;
+      const pagePosts = filteredPosts.slice(startIdx, endIdx);
+
+      const tbody = document.getElementById('board-tbody');
+
+      if (pagePosts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="padding:50px 0;">&#xAC8C;&#xC2DC;&#xAE00;&#xC774; &#xC5C6;&#xC2B5;&#xB2C8;&#xB2E4;.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = pagePosts.map(post => {
+        const authorName = (post.author && (post.author.name || post.author.email)) || '\uc775\uba85';
+        return (
+          '<tr>' +
+          '<td>' + post.num + '</td>' +
+          '<td class="subject">' +
+          '<a href="/post.html?id=' + post.id + '">' + escapeHtml(post.title) + '</a>' +
+          '</td>' +
+          '<td>' + escapeHtml(authorName) + '</td>' +
+          '<td>' + formatDate(post.createdAt) + '</td>' +
+          '<td>-</td>' +
+          '</tr>'
+        );
+      }).join('');
+    }
+
+    function renderPagination() {
+      const totalPages = Math.ceil(filteredPosts.length / pageSize);
+      const pagination = document.getElementById('pagination');
+
+      if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+      }
+
+      let html = '<div class="pagination">';
+      for (let i = 1; i <= totalPages; i += 1) {
+        if (i === currentPage) {
+          html += '<span class="pg_btn active">' + i + '</span>';
+        } else {
+          html += '<a href="#" class="pg_btn" data-page="' + i + '">' + i + '</a>';
+        }
+      }
+      html += '</div>';
+      pagination.innerHTML = html;
+
+      pagination.querySelectorAll('a.pg_btn').forEach((link) => {
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          const page = Number(event.currentTarget.dataset.page);
+          currentPage = page;
+          renderPosts();
+          renderPagination();
+          window.scrollTo(0, 0);
+        });
+      });
+    }
+
+    function matchesSearch(post, field, keyword) {
+      const value = String(keyword).toLowerCase();
+      if (field === 'content') {
+        return String(post.content || '').toLowerCase().includes(value);
+      }
+      if (field === 'author') {
+        const authorName = (post.author && (post.author.name || post.author.email)) || '';
+        return authorName.toLowerCase().includes(value);
+      }
+      return String(post.title || '').toLowerCase().includes(value);
+    }
+
+    function applySearch() {
+      const keyword = searchInput.value.trim();
+      const field = searchField.value;
+
+      if (!keyword) {
+        filteredPosts = allPosts.slice();
+      } else {
+        filteredPosts = allPosts.filter((post) => matchesSearch(post, field, keyword));
+      }
+
+      currentPage = 1;
+      renderPosts();
+      renderPagination();
+    }
+
+    async function loadPosts() {
+      try {
+        const q = query(
+          collection(db, 'posts'),
+          orderBy('createdAt', 'desc')
+        );
+
+        const snapshot = await getDocs(q);
+
+        allPosts = snapshot.docs
+          .map((doc, index) => ({
+            id: doc.id,
+            num: snapshot.size - index,
+            ...doc.data()
+          }))
+          .filter(post => post.category === category);
+
+        filteredPosts = allPosts.slice();
+        updateTitle();
+        applySearch();
+      } catch (err) {
+        console.error('Posts load error:', err);
+        document.getElementById('board-tbody').innerHTML =
+          '<tr><td colspan="5" style="padding:50px 0; color:#ef4444;">&#xAC8C;&#xC2DC;&#xAE00;&#xC744; &#xBD88;&#xB7EC;&#xC624;&#xC9C0; &#xBABB;&#xD588;&#xC2B5;&#xB2C8;&#xB2E4;.</td></tr>';
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    writeBtn.addEventListener('click', (event) => {
+      if (!currentUser) {
+        event.preventDefault();
+        alert('\ub85c\uadf8\uc778\uc774 \ud544\uc694\ud569\ub2c8\ub2e4.');
+        window.location.href = '/login.html';
+      }
+    });
+
+    searchCategory.value = category;
+    updateWriteLink();
+
+    searchForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      applySearch();
+    });
+
+    setTimeout(loadPosts, 500);
+  </script>
+</body>
+</html>

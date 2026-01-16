@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>&#xD30C;&#xC774;&#xC5B4;&#xBCF4;&#xB4DC; 2026</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/runtime-config.js"></script>
+</head>
+<body>
+  <header>
+    <div class="wrap hd-inner">
+      <a href="/" class="logo">Fireboard 2026</a>
+      <nav class="gnb">
+        <a href="/board.html?category=notice">&#xACF5;&#xC9C0;&#xC0AC;&#xD56D;</a>
+        <a href="/board.html?category=free">&#xC790;&#xC720;&#xAC8C;&#xC2DC;&#xD310;</a>
+        <a href="/board.html?category=qna">Q&A</a>
+        <a href="/board.html?category=gallery">&#xAC24;&#xB7EC;&#xB9AC;</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="hero-banner">
+      <h2>Fireboard 2026</h2>
+      <p>&#xD30C;&#xC774;&#xC5B4;&#xBCA0;&#xC774;&#xC2A4; &#xAE30;&#xBC18; &#xCEE4;&#xBBA4;&#xB2C8;&#xD2F0; &#xAC8C;&#xC2DC;&#xD310;</p>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 300px; gap:30px; padding:20px;">
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
+        <div class="latest-box">
+          <div class="latest-title">
+            <span>&#xACF5;&#xC9C0;&#xC0AC;&#xD56D;</span>
+            <a href="/board.html?category=notice" style="font-size:13px; color:#888;">&#xB354;&#xBCF4;&#xAE30;+</a>
+          </div>
+          <ul class="latest-list" id="notice-list">
+            <li>&#xB85C;&#xB529; &#xC911;..</li>
+          </ul>
+        </div>
+
+        <div class="latest-box">
+          <div class="latest-title">
+            <span>&#xC790;&#xC720;&#xAC8C;&#xC2DC;&#xD310;</span>
+            <a href="/board.html?category=free" style="font-size:13px; color:#888;">&#xB354;&#xBCF4;&#xAE30;+</a>
+          </div>
+          <ul class="latest-list" id="free-list">
+            <li>&#xB85C;&#xB529; &#xC911;..</li>
+          </ul>
+        </div>
+
+        <div class="latest-box">
+          <div class="latest-title">
+            <span>Q&A</span>
+            <a href="/board.html?category=qna" style="font-size:13px; color:#888;">&#xB354;&#xBCF4;&#xAE30;+</a>
+          </div>
+          <ul class="latest-list" id="qna-list">
+            <li>&#xB85C;&#xB529; &#xC911;..</li>
+          </ul>
+        </div>
+
+        <div class="latest-box">
+          <div class="latest-title">
+            <span>&#xAC24;&#xB7EC;&#xB9AC;</span>
+            <a href="/board.html?category=gallery" style="font-size:13px; color:#888;">&#xB354;&#xBCF4;&#xAE30;+</a>
+          </div>
+          <ul class="latest-list" id="gallery-list">
+            <li>&#xB85C;&#xB529; &#xC911;..</li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <div class="latest-box" id="login-box">
+          <div class="latest-title">&#xB85C;&#xADF8;&#xC778;</div>
+          <div style="padding:10px 0;">&#xB85C;&#xB529; &#xC911;..</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="wrap">
+      <p>&copy; 2026 Fireboard. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { currentUser } from '/js/firebase-init.js';
+    import { logout } from '/js/auth.js';
+    import { db } from '/js/firebase-init.js';
+    import { collection, query, orderBy, limit, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { formatDate } from '/js/posts.js';
+
+    async function renderLoginBox() {
+      const box = document.getElementById('login-box');
+
+      if (currentUser) {
+        box.innerHTML =
+          '<div class="latest-title">&#xB0B4; &#xC815;&#xBCF4;</div>' +
+          '<div style="padding:15px 0;">' +
+          '<p style="margin:0 0 15px 0; font-weight:600;">' + (currentUser.displayName || currentUser.email) + '</p>' +
+          '<button class="btn btn-gray" style="width:100%; margin-bottom:5px;" onclick="location.href=\'/my.html\'">&#xB9C8;&#xC774;&#xD398;&#xC774;&#xC9C0;</button>' +
+          '<button class="btn" style="width:100%;" id="logout-btn-box">&#xB85C;&#xADF8;&#xC544;&#xC6C3;</button>' +
+          '</div>';
+
+        document.getElementById('logout-btn-box').addEventListener('click', async () => {
+          try {
+            await logout();
+            alert('\ub85c\uadf8\uc544\uc6c3\ub418\uc5c8\uc2b5\ub2c8\ub2e4.');
+            location.reload();
+          } catch (err) {
+            alert('\ub85c\uadf8\uc544\uc6c3 \uc2e4\ud328: ' + err.message);
+          }
+        });
+      } else {
+        box.innerHTML =
+          '<div class="latest-title">&#xB85C;&#xADF8;&#xC778;</div>' +
+          '<div style="padding:15px 0;">' +
+          '<p style="text-align:center; margin-bottom:20px; color:#888;">&#xB85C;&#xADF8;&#xC778; &#xD6C4; &#xC774;&#xC6A9; &#xAC00;&#xB2A5;&#xD569;&#xB2C8;&#xB2E4;.</p>' +
+          '<button class="btn" style="width:100%; margin-bottom:10px;" onclick="location.href=\'/login.html\'">&#xB85C;&#xADF8;&#xC778;</button>' +
+          '<div style="text-align:center;"><a href="/register.html" style="font-size:13px; color:#888;">&#xD68C;&#xC6D0;&#xAC00;&#xC785;</a></div>' +
+          '</div>';
+      }
+    }
+
+    async function loadLatest(category, elementId) {
+      try {
+        const q = query(
+          collection(db, 'posts'),
+          orderBy('createdAt', 'desc'),
+          limit(50)
+        );
+        const snapshot = await getDocs(q);
+        const list = document.getElementById(elementId);
+
+        const filtered = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(post => post.category === category)
+          .slice(0, 5);
+
+        if (filtered.length > 0) {
+          list.innerHTML = filtered.map(post => {
+            return '<li>' +
+              '<a href="/post.html?id=' + post.id + '">' +
+              escapeHtml(post.title) +
+              '</a>' +
+              '<span class="date">' + formatDate(post.createdAt) + '</span>' +
+              '</li>';
+          }).join('');
+        } else {
+          list.innerHTML = '<li>&#xAC8C;&#xC2DC;&#xAE00;&#xC774; &#xC5C6;&#xC2B5;&#xB2C8;&#xB2E4;.</li>';
+        }
+      } catch (err) {
+        console.error('Latest load error:', err);
+        document.getElementById(elementId).innerHTML = '<li>&#xB85C;&#xB529; &#xC2E4;&#xD328;</li>';
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    setTimeout(() => {
+      renderLoginBox();
+      loadLatest('notice', 'notice-list');
+      loadLatest('free', 'free-list');
+      loadLatest('qna', 'qna-list');
+      loadLatest('gallery', 'gallery-list');
+    }, 500);
+  </script>
+</body>
+</html>

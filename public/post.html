@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>&#xAC8C;&#xC2DC;&#xAE00; &#xBCF4;&#xAE30; - Fireboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/runtime-config.js"></script>
+</head>
+<body>
+  <header>
+    <div class="wrap hd-inner">
+      <a href="/" class="logo">Fireboard 2026</a>
+      <nav class="gnb">
+        <a href="/board.html?category=notice">&#xACF5;&#xC9C0;&#xC0AC;&#xD56D;</a>
+        <a href="/board.html?category=free">&#xC790;&#xC720;&#xAC8C;&#xC2DC;&#xD310;</a>
+        <a href="/board.html?category=qna">Q&A</a>
+        <a href="/board.html?category=gallery">&#xAC24;&#xB7EC;&#xB9AC;</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="wrap container">
+    <h2 class="page-title">&#xAC8C;&#xC2DC;&#xAE00; &#xBCF4;&#xAE30;</h2>
+
+    <div id="loading" style="text-align: center; padding: 100px 0;">&#xB85C;&#xB529; &#xC911;..</div>
+
+    <div id="post-view" style="display: none;">
+      <div style="border:1px solid #ddd; border-radius:8px; overflow:hidden;">
+        <div style="background:#f9f9f9; padding:20px; border-bottom:1px solid #eee;">
+          <h3 style="margin:0; font-size:22px;" id="post-title">&#xC81C;&#xBAA9;</h3>
+          <div style="margin-top:10px; color:#666; font-size:13px;" id="post-meta"></div>
+        </div>
+
+        <div id="post-images" style="padding:20px; border-bottom:1px solid #eee; display:none;"></div>
+
+        <div style="padding:40px; min-height:200px; line-height:1.8;" id="post-content">&#xB0B4;&#xC6A9;</div>
+      </div>
+
+      <div style="margin-top:20px; display:flex; justify-content:space-between; align-items:center;">
+        <button class="btn btn-gray" onclick="history.back()">&#xBAA9;&#xB85D;</button>
+        <div style="display:flex; gap:10px;" id="action-buttons"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="wrap">
+      <p>&copy; 2026 Fireboard. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { currentUser, db } from '/js/firebase-init.js';
+    import { doc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { formatDate } from '/js/posts.js';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const postId = urlParams.get('id');
+
+    if (!postId) {
+      alert('\uc798\ubabb\ub41c \uc811\uadfc\uc785\ub2c8\ub2e4.');
+      history.back();
+    }
+
+    async function loadPost() {
+      try {
+        const docRef = doc(db, 'posts', postId);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+          alert('\uac8c\uc2dc\uae00\uc744 \ucc3e\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.');
+          history.back();
+          return;
+        }
+
+        const post = docSnap.data();
+        const authorName = (post.author && (post.author.name || post.author.email)) || '\uc775\uba85';
+
+        document.getElementById('post-title').textContent = post.title;
+        document.getElementById('post-meta').innerHTML =
+          '\uc791\uc131\uc790 <b>' + escapeHtml(authorName) + '</b> | ' + formatDate(post.createdAt) + ' | \uc870\ud68c -';
+        document.getElementById('post-content').innerHTML = escapeHtml(post.content).replace(/\n/g, '<br>');
+
+        if (post.images && post.images.length > 0) {
+          const imagesBox = document.getElementById('post-images');
+          imagesBox.style.display = 'block';
+          imagesBox.innerHTML = post.images.map(url =>
+            '<img src="' + url + '" style="max-width: 100%; margin-bottom: 10px; border-radius: 8px;">'
+          ).join('');
+        }
+
+        if (currentUser && post.author && currentUser.uid === post.author.uid) {
+          document.getElementById('action-buttons').innerHTML =
+            '<button class="btn" onclick="location.href=\'/write.html?id=' + postId + '\'">&#xC218;&#xC815;</button>' +
+            '<button class="btn btn-red" id="delete-btn">&#xC0AD;&#xC81C;</button>';
+
+          document.getElementById('delete-btn').addEventListener('click', async () => {
+            if (!confirm('\uc815\ub9d0 \uc0ad\uc81c\ud558\uc2dc\uaca0\uc2b5\ub2c8\uae4c?')) return;
+
+            try {
+              await deleteDoc(docRef);
+              alert('\uc0ad\uc81c\ub418\uc5c8\uc2b5\ub2c8\ub2e4.');
+              history.back();
+            } catch (err) {
+              alert('\uc0ad\uc81c \uc2e4\ud328: ' + err.message);
+            }
+          });
+        }
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('post-view').style.display = 'block';
+      } catch (err) {
+        console.error('Post load error:', err);
+        alert('\uac8c\uc2dc\uae00\uc744 \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.');
+        history.back();
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    setTimeout(loadPost, 500);
+  </script>
+</body>
+</html>

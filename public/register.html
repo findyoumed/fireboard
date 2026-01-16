@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>&#xD68C;&#xC6D0;&#xAC00;&#xC785; - Fireboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/runtime-config.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="card" style="max-width:420px; margin:40px auto;">
+      <h2>&#xD68C;&#xC6D0;&#xAC00;&#xC785;</h2>
+      <input class="input" id="displayName" type="text" placeholder="&#xC774;&#xB984;" />
+      <input class="input" id="email" type="email" placeholder="&#xC774;&#xBA54;&#xC77C;" style="margin-top:10px;" />
+      <input class="input" id="password" type="password" placeholder="&#xBE44;&#xBC00;&#xBC88;&#xD638; (6&#xC790; &#xC774;&#xC0C1;)" style="margin-top:10px;" />
+      <input class="input" id="passwordConfirm" type="password" placeholder="&#xBE44;&#xBC00;&#xBC88;&#xD638; &#xD655;&#xC778;" style="margin-top:10px;" />
+      <button class="btn" id="register-btn" style="margin-top:10px; width:100%;">&#xD68C;&#xC6D0;&#xAC00;&#xC785;</button>
+      <div style="margin-top:12px;"><a href="/login.html">&#xB85C;&#xADF8;&#xC778;</a></div>
+      <div class="error-message" id="error-message"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { register } from '/js/auth.js';
+
+    document.getElementById('register-btn').addEventListener('click', async () => {
+      const displayName = document.getElementById('displayName').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const passwordConfirm = document.getElementById('passwordConfirm').value;
+      const errorMsg = document.getElementById('error-message');
+
+      if (password !== passwordConfirm) {
+        errorMsg.textContent = '\ube44\ubc00\ubc88\ud638\uac00 \uc77c\uce58\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.';
+        errorMsg.classList.add('show');
+        return;
+      }
+
+      try {
+        errorMsg.classList.remove('show');
+        await register(email, password, displayName);
+        alert('\ud68c\uc6d0\uac00\uc785\uc774 \uc644\ub8cc\ub418\uc5c8\uc2b5\ub2c8\ub2e4.');
+        window.location.href = '/';
+      } catch (error) {
+        errorMsg.textContent = getErrorMessage(error.code);
+        errorMsg.classList.add('show');
+      }
+    });
+
+    function getErrorMessage(code) {
+      switch (code) {
+        case 'auth/email-already-in-use':
+          return '\uc774\ubbf8 \uc0ac\uc6a9 \uc911\uc778 \uc774\uba54\uc77c\uc785\ub2c8\ub2e4.';
+        case 'auth/invalid-email':
+          return '\uc62c\ubc14\ub978 \uc774\uba54\uc77c \ud615\uc2dd\uc774 \uc544\ub2d9\ub2c8\ub2e4.';
+        case 'auth/weak-password':
+          return '\ube44\ubc00\ubc88\ud638\ub294 6\uc790 \uc774\uc0c1\uc774\uc5b4\uc57c \ud569\ub2c8\ub2e4.';
+        default:
+          return '\ud68c\uc6d0\uac00\uc785 \uc911 \uc624\ub958\uac00 \ubc1c\uc0dd\ud588\uc2b5\ub2c8\ub2e4.';
+      }
+    }
+  </script>
+</body>
+</html>
